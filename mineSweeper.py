@@ -7,31 +7,50 @@ def main():
     global MINES
     global SIZE
     global gameBoard
-    DIM = 10
+    global knowledgeBase
+    global agentBoard
+    global SCORE
+    global MOVE 
+    MOVE = True
+    DIM = 5
     #int(input("What dimension should the game board be?\n"))
-    MINES = 10
+    MINES = 7
     #int(input("How many mines should be on the game board?\n"))
     SIZE = DIM**2
-
+    SCORE = MINES
     
     makeGameBoard()
-    #getNeighbors()
+    makeKnowledgeBase()
     neighborUpdate()
+    printBoardNew()
 
+    num = random.randint(0, SIZE - 1)
+    #print("spot num is {}".format(gameBoard["spot{}".format(num)]))
 
-    #print(gameBoard)
+    #while(MOVE):
+    #    agentMove()
 
 def printBoard(gameBoard):
 
     for i in range(len(gameBoard)):
         print(gameBoard["spot{}".format(i)])
-    #print(gameBoard)
-
     return None
+
+def makeKnowledgeBase():
+    global knowledgeBase
+    global SIZE
+    knowledgebase = {}
+    for i in range(SIZE):
+        knowledgebase["spot{}".format((i))] = {
+            "selected" : False,
+            "isMine" : None,
+            "mines" : 0,
+            "logic" : "x",
+        }
 
 # moves the agent
 def agentMove():
-
+    global MOVE
     
 
     return None
@@ -63,7 +82,7 @@ def neighborUpdate():
     for i in range(SIZE):
         neighbors = getNeighbors(i)
         counter = 0
-        print(neighbors)
+        #print(neighbors)
         for j in neighbors:
             if(gameBoard["spot{}".format(j)].get("isMine")):
                 counter += 1
@@ -162,6 +181,20 @@ class showMaze():
         window.geometry('%dx%d+%d+%d' % (width, height, x, y))
         window.mainloop()
 
+def printBoardNew():
+    global gameBoard
+    global DIM
+
+    for i in range(DIM):
+        temp = ""
+        for j in range(DIM):
+            spot = (i * DIM) + j
+            if (gameBoard["spot{}".format(spot)].get("isMine")):
+                temp += " * "
+            else:
+                temp += " " + str(gameBoard["spot{}".format(spot)].get("mines")) + " "
+                
+        print(temp)
 
 #___________________________________________________________________
 # RUN THE MAIN: DO NOT DELETE!
