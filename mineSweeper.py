@@ -21,10 +21,7 @@ def main():
     
     makeGameBoard()
     makeKnowledgeBase()
-<<<<<<< HEAD
-=======
     neighborUpdate()
->>>>>>> 2ba10e854477919acb1ef3f74f9a0c34feaa509b
     printBoardNew()
 
     num = random.randint(0, SIZE - 1)
@@ -54,7 +51,6 @@ def makeKnowledgeBase():
 # moves the agent
 def agentMove():
     global MOVE
-<<<<<<< HEAD
     global SIZE
     global MINES
     global knowledgeBase
@@ -70,8 +66,6 @@ def agentMove():
                 currNum = random.randint(0, SIZE - 1)
         else:
             currNum = int(safeOnes.pop(0))
-=======
->>>>>>> 2ba10e854477919acb1ef3f74f9a0c34feaa509b
     
         currNumStr = "spot{}".format(currNum)
         if (gameBoard[currNumStr].get("isMine")):
