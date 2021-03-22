@@ -30,6 +30,7 @@ def main():
     neighborUpdate()
     printBoardNew()
     agentMove()
+    print("FINAL")
     print ("Safe spaces are: {}".format(safeOnes))
     print ("Mines are: {}".format(mineOnes))
     print ("SCORE: {}".format(SCORE))
@@ -60,25 +61,42 @@ def agentMove():
 
     
     while (len(mineOnes) < MINES):
-        print("Agent Move")
         currNum = random.randint(0, SIZE - 1)
         currNumStr = "spot{}".format(currNum)
-        # Checking if a space is not selected
-        if(not gameBoard[currNumStr]["selected"]):
-            # Mark spot as selected
-            gameBoard[currNumStr]["selected"] = True
-            # If the spot is a mine add to mineOnes and decrease the score
+        # Case for safeOnes being empty
+        if not safeOnes:
             if (gameBoard[currNumStr].get("isMine")):
                 print("YOU'VE HIT A MINE!")
                 mineOnes.add(currNum)
                 SCORE -= 1
-        else: continue
+            else:
+                safeOnes.add(currNum)
+        # Case for safeOnes having some item
+        else:
+            selectCheck  = True # var to check if any items in safeOnes haven't been selected yet
+            for i in safeOnes:
+                # Checks if i in safeOnes has not been selected
+                if not gameBoard["spot{}".format(i)]["selected"]:
+                    selectCheck = False
+                    currNum = i
+                    currNumStr = "spot{}".format(currNum)
+                    break
+            # If all items in safeOnes are selected
+            if selectCheck:
+                if (gameBoard[currNumStr].get("isMine")):
+                    print("YOU'VE HIT A MINE!")
+                    mineOnes.add(currNum)
+                    SCORE -= 1
+           # if(selectCheck): break
 
-        tempNeighbors = set()
-        tempNeighbors = getNeighbors(currNum).symmetric_difference(mineOnes).symmetric_difference(safeOnes)
-        tempValue = gameBoard[currNumStr].get("mines") - len(mineOnes.intersection(tempNeighbors))
+        
+        gameBoard[currNumStr]["selected"] = True
+       
+        unknownNeighbors = set()
+        unknownNeighbors = getNeighbors(currNum).symmetric_difference(mineOnes).symmetric_difference(safeOnes)
+        tempValue = gameBoard[currNumStr].get("mines") - len(mineOnes.intersection(unknownNeighbors))
         knowledgeBase[currNum] = {
-            "spots" : tempNeighbors, # neighbhors 
+            "spots" : unknownNeighbors, # neighbhors 
             "value" : tempValue # clue
         }
 
@@ -103,12 +121,16 @@ def agentMove():
             "value" : tempValue # clue
         }"""
                 
-        logicCheck(currNum)
+        updateKnowledgeBase(currNum)
+        print ("Agent Move, currNum = {}".format(currNum))
+        print ("Mines are: {}".format(mineOnes))
+        print ("Safe spots are: {}".format(safeOnes))
+        print ("SCORE: {}".format(SCORE))
 
     return None
 
 #logic check to try and find values of unknown spots
-def logicCheck(currNum):
+def updateKnowledgeBase(currNum):
     #RULE 1: If a set is equal to 0, everything in the set is safe
     #RULE 2: If a set is equal to the number of variables in it, everything in the set is a mine
     #RULE 3: Known variables should be removed from all knowledgeBase
@@ -122,9 +144,48 @@ def logicCheck(currNum):
     global gameBoard
     global safeOnes
     global mineOnes
+    # Change check
+    change = True
+    while(change):
+    # Iterate through the whole knowledge base
+        for i in knowledgeBase:
+            change = False
+            # Remove from sets any spots in mineOnes and safeOnes
+            keep = set()
+            for j in knowledgeBase[i]["spots"]:
+                if j not in safeOnes or j not in mineOnes:
+                    keep.add(j)
+                    change = True
+                # change value only when mines are removed 
+                if j in mineOnes:
+                    knowledgeBase[i]["value"] = knowledgeBase[i]["value"] - 1
+                    change = True
+            knowledgeBase[i]["spots"] = keep
 
+            # Simplify if subsets are present
+            for j in knowledgeBase:
+                if i != j:
+                    if knowledgeBase[i]["spots"].issubset(knowledgeBase[j]["spots"]):
+                        knowledgeBase[j]["spots"].symmetric_difference_update(knowledgeBase[i]["spots"])
+                        change = True
+                    elif knowledgeBase[j]["spots"].issubset(knowledgeBase[i]["spots"]):
+                        knowledgeBase[i]["spots"].symmetric_difference_update(knowledgeBase[j]["spots"])
+                        change = True
+
+            # RULE 2 - if the value = length of spots then all neighbhors are mines
+            if(len(knowledgeBase[i]["spots"]) == knowledgeBase[i]["value"]):
+                mineOnes.update(knowledgeBase[i]["spots"])
+                change = True
+            
+            # RULE 1 - if the value is 0 add all neighbhors to safeOnes
+            if(knowledgeBase[i]["value"] == 0):
+                safeOnes.update(knowledgeBase[i]["spots"])
+                change = True
+
+
+         
     currNumStr = "spot{}".format(currNum)
-
+"""
     # RULE 1 - if the value is 0 add all neighbhors to safeOnes
     if(knowledgeBase[currNum]["value"] == 0):
         safeOnes.update(knowledgeBase[currNum]["spots"])
@@ -142,19 +203,17 @@ def logicCheck(currNum):
             knowledgeBase[currNum]["value"] = knowledgeBase[currNum]["value"] - 1
     knowledgeBase[currNum]["spots"] = keep
 
-    # RULE 4 - 
-
     # RULE 5 - Remove subsets
     for i in knowledgeBase:
         for j in knowledgeBase:
             #keep = set()
             if knowledgeBase[i]["spots"].issubset(knowledgeBase[j]["spots"]):
                 knowledgeBase[j]["spots"].symmetric_difference_update(knowledgeBase[i]["spots"])
-    
+ 
 
 
 
-    """if (gameBoard[currNumStr].get("mines") == 0): # All the neighbors are safe
+    if (gameBoard[currNumStr].get("mines") == 0): # All the neighbors are safe
         safeOnes.update(getNeighbors(currNum))
     elif (gameBoard[currNumStr].get("mines") == len(getNeighbors(currNum))): # All the neighbors are mines
         mineOnes.update(getNeighbors(currNum))
@@ -167,10 +226,10 @@ def logicCheck(currNum):
         if (len(mineOnes.intersection(newNeighbors)) == gameBoard[currNumStr].get("mines")): #All mines are known
             safeOnes.update(getNeighbors.difference(mineOnes))
         elif (len(newNeighbors) == gameBoard[currNumStr].get("mines")): #All the unselected neighbors are mines
-            mineOnes.update(getNeighbors(currNum))"""
+            mineOnes.update(getNeighbors(currNum))
 
     #remove known values from knowledge base
-    """for i in knowledgeBase:
+    for i in knowledgeBase:
         keep = set()
         for j in knowledgeBase[i].get("spots"):
             if (j not in mineOnes):
@@ -233,8 +292,8 @@ def logicCheck(currNum):
     #remove accidental duplicates
     safeOnes = list(set(safeOnes))
     mineOnes = list(set(mineOnes))
+
 """
-        
 # makes the gameboard using the DIM, MINES (number of mines)
 def makeGameBoard():
     global DIM
