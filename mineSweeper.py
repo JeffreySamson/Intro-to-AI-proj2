@@ -69,16 +69,33 @@ def agentMove():
     
         currNumStr = "spot{}".format(currNum)
         if (gameBoard[currNumStr].get("isMine")):
+            knowledgeBase[currNumStr].update({"selected": True})
+            gameBoard[currNumStr].update({"selected": True})
             print("YOU'VE HIT A MINE AND DIED!")
             return None
         else:
             knowledgeBase[currNumStr].update({"selected": True})
             knowledgeBase[currNumStr].update({"mines": gameBoard[currNumStr].get("mines")})
+            gameBoard[currNumStr].update({"selected": True})
 
             if (knowledgeBase[currNumStr].get("mines") == 0):
                 safeOnes.append(getNeighbors(currNum))
-
+            elif (knowledgeBase[currNumStr].get("mines") == 9):
+                mineOnes.append(getNeighbors(currNum))
+            else:
+                tempNeighbors = getNeighbors(currNum)
+                for i in getNeighbors(currNum):
+                    if (knowledgeBase["spot{}".format(i)].get("selected")):
+                        tempNeighbors.remove(i)
+                
+                if (len(tempNeighbors) == knowledgeBase[currNumStr].get("mines")):
+                    mineOnes.append(getNeighbors(currNum))
+                else:
+                    knowledgeBase[currNumStr].update({"logic": "INSERT LOGIC STR"})
+                    #logicStream
     return None
+
+def logicStream():
 
 # makes the gameboard using the DIM, MINES (number of mines)
 def makeGameBoard():
