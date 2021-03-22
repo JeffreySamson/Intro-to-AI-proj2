@@ -58,17 +58,29 @@ def agentMove():
     global safeOnes
     global mineOnes
 
-    currNum = random.randint(0, SIZE - 1)
-    currNumStr = "spot{}".format(currNum)
+    
     while (len(mineOnes) < MINES):
-        print("Iteration")
-
+        print("Agent Move")
+        currNum = random.randint(0, SIZE - 1)
+        currNumStr = "spot{}".format(currNum)
+        # Checking if a space is not selected
         if(not gameBoard[currNumStr]["selected"]):
+            # Mark spot as selected
+            gameBoard[currNumStr]["selected"] = True
+            # If the spot is a mine add to mineOnes and decrease the score
             if (gameBoard[currNumStr].get("isMine")):
                 print("YOU'VE HIT A MINE!")
                 mineOnes.add(currNum)
                 SCORE -= 1
-            
+        else: continue
+
+        tempNeighbors = set()
+        tempNeighbors = getNeighbors(currNum).symmetric_difference(mineOnes).symmetric_difference(safeOnes)
+        tempValue = gameBoard[currNumStr].get("mines") - len(mineOnes.intersection(tempNeighbors))
+        knowledgeBase[currNum] = {
+            "spots" : tempNeighbors, # neighbhors 
+            "value" : tempValue # clue
+        }
 
         """if (not safeOnes):
             currNum = random.randint(0, SIZE - 1)
@@ -112,9 +124,6 @@ def logicCheck(currNum):
     global mineOnes
 
     currNumStr = "spot{}".format(currNum)
-
-    # mark the spot on gameBoard as selected
-    gameBoard[currNumStr].update({"selected": True}) 
 
     # RULE 1 - if the value is 0 add all neighbhors to safeOnes
     if(knowledgeBase[currNum]["value"] == 0):
