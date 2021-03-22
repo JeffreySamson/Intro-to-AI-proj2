@@ -5,25 +5,30 @@ def main():
 
     global DIM
     global MINES
+    global MINESONES
     global SIZE
     global gameBoard
     global knowledgeBase
+    global safeOnes
+    global mineOnes
     global agentBoard
     global SCORE
-    global MOVE 
+    global MOVE
+    gameBoard = {}
+    knowledgeBase = {}
+    safeOnes = {}
+    mineOnes = {}
     MOVE = True
-    DIM = 5
+    DIM = 3
     #int(input("What dimension should the game board be?\n"))
-    MINES = 7
+    MINES = 1
     #int(input("How many mines should be on the game board?\n"))
     SIZE = DIM**2
     SCORE = MINES
-    
+    #knowledgeBase = []
     makeGameBoard()
-    makeKnowledgeBase()
     neighborUpdate()
     printBoardNew()
-
     num = random.randint(0, SIZE - 1)
     #print("spot num is {}".format(gameBoard["spot{}".format(num)]))
 
@@ -36,67 +41,134 @@ def printBoard(gameBoard):
         print(gameBoard["spot{}".format(i)])
     return None
 
-def makeKnowledgeBase():
-    global knowledgeBase
-    global SIZE
-    knowledgebase = {}
-    for i in range(SIZE):
-        knowledgebase["spot{}".format((i))] = {
-            "selected" : False,
-            "isMine" : None,
-            "mines" : 0,
-            "logic" : "x",
-        }
 
 # moves the agent
 def agentMove():
+    #RULE 1: If a set is equal to 0, everything in the set is safe
+    #RULE 2: If a set is equal to the number of variables in it, everything in the set is a mine
+    #RULE 3: Known variables should be removed from all knowledgeBase
+    #RULE 4: If you can figure out which members in a set are mines, all others are safe 
+    #RULE 5: If there is an intersection, new value is |spotsA - spotsB| = |valueA - valueB|
     global MOVE
     global SIZE
     global MINES
+    global SCORE
     global knowledgeBase
     global gameBoard
-    safeOnes = []
-    mineOnes = []
+    global safeOnes
+    global mineOnes
+
     currNum = random.randint(0, SIZE - 1)
 
     while (len(mineOnes) < MINES):
         if (not safeOnes):
             currNum = random.randint(0, SIZE - 1)
-            while (currNum in mineOnes or knowledgeBase["spot{}".format(currNum)].get("selected")):
+            while (currNum in mineOnes or gameBoard["spot{}".format(currNum)].get("selected")):
                 currNum = random.randint(0, SIZE - 1)
         else:
             currNum = int(safeOnes.pop(0))
-    
+
         currNumStr = "spot{}".format(currNum)
         if (gameBoard[currNumStr].get("isMine")):
-            knowledgeBase[currNumStr].update({"selected": True})
-            gameBoard[currNumStr].update({"selected": True})
-            print("YOU'VE HIT A MINE AND DIED!")
-            return None
-        else:
-            knowledgeBase[currNumStr].update({"selected": True})
-            knowledgeBase[currNumStr].update({"mines": gameBoard[currNumStr].get("mines")})
-            gameBoard[currNumStr].update({"selected": True})
-
-            if (knowledgeBase[currNumStr].get("mines") == 0):
-                safeOnes.append(getNeighbors(currNum))
-            elif (knowledgeBase[currNumStr].get("mines") == 9):
-                mineOnes.append(getNeighbors(currNum))
-            else:
-                tempNeighbors = getNeighbors(currNum)
-                for i in getNeighbors(currNum):
-                    if (knowledgeBase["spot{}".format(i)].get("selected")):
-                        tempNeighbors.remove(i)
+            print("YOU'VE HIT A MINE!")
+            mineOnes.append(currNum)
+            SCORE -= 1
+        
+        tempNeighbors = getNeighbors(currNum).difference(mineOnes).difference(safeOnes)
+        tempValue = gameBoard[currNumStr].get("mines") - len(mineOnes.intersect(tempNeighbors))
+        knowledgeBase[currNum] = {
+            "spots" : tempNeighbors,
+            "value" : tempValue,
+        }
                 
-                if (len(tempNeighbors) == knowledgeBase[currNumStr].get("mines")):
-                    mineOnes.append(getNeighbors(currNum))
-                else:
-                    knowledgeBase[currNumStr].update({"logic": "INSERT LOGIC STR"})
-                    #logicStream
+        logicCheck(currNum)
+
     return None
 
-def logicStream():
+#logic check to try and find values of unknown spots
+def logicCheck(currNum):
+    global MOVE
+    global SIZE
+    global MINES
+    global SCORE
+    global knowledgeBase
+    global gameBoard
+    global safeOnes
+    global mineOnes
 
+    currNumStr = "spot{}".format(currNum)
+    
+    gameBoard[currNumStr].update({"selected": True})
+    if (gameBoard[currNumStr].get("mines") == 0): #All the neighbors are safe
+        safeOnes.append(getNeighbors(currNum))
+    elif (gameBoard[currNumStr].get("mines") == len(getNeighbors(currNum))): #All the neighbors are mines
+        mineOnes.append(getNeighbors(currNum))
+    else:
+        newNeighbors = getNeighbors(currNum)
+        for i in getNeighbors(currNum):
+            if (gameBoard["spot{}".format(i)].get("selected")):
+                newNeighbors.remove(i)
+
+        if (len(mineOnes.intersect(newNeighbors)) == gameBoard[currNumStr].get("mines")): #All mines are known
+            safeOnes.append(getNeighbors.difference(mineOnes))
+        elif (len(newNeighbors) == gameBoard[currNumStr].get("mines")): #All the unselected neighbors are mines
+            mineOnes.append(getNeighbors(currNum))
+
+    #remove known values from knowledge base
+    for i in knowledgeBase:
+        for j in knowledgeBase[i].get("spots"):
+            if (j in mineOnes):
+                tempSpots = knowledgeBase[i].get("spots").remove(j)
+                knowledgeBase[i].update({"spots" : tempSpots}, {"value" : (knowledgeBase[i].get("value") - 1)})
+            if (j in safeOnes):
+                tempSpots = knowledgeBase[i].get("spots").remove(j)
+                knowledgeBase[i].update({"spots" : tempSpots})
+    
+    #check for new known values
+    for i in knowledgeBase:
+        if (knowledgeBase[i].get("value") == 0):
+            safeOnes.append(knowledgeBase[i].get("spots"))
+        elif (knowledgeBase[i].get("value") == len(knowledgeBase[i].get("spots"))):
+            mineOnes.append(knowledgeBase[i].get("spots"))
+
+    clueChange = True #changes in the clues in order to check again
+    while (clueChange):
+        #check if any clues are subsets of other clues
+        for i in knowledgeBase:
+            for j in knowledgeBase:
+                if (i != j):
+                    if (knowledgeBase[i].get("spots").issubset(knowledgeBase[j].get("spots"))):
+                        knowledgeBase[j].update({"spots" : knowledgeBase[j].get("spots").difference(knowledgeBase[i].get("spots"))},
+                            {"value" : knowledgeBase[j].get("value").difference(knowledgeBase[i].get("value"))})
+        
+        clueChange = False
+
+        #remove known values from knowledge base
+        for i in knowledgeBase:
+            for j in knowledgeBase[i].get("spots"):
+                if (j in mineOnes):
+                    tempSpots = knowledgeBase[i].get("spots").remove(j)
+                    knowledgeBase[i].update({"spots" : tempSpots},{"value" : (knowledgeBase[i].get("value") - 1)})
+                    clueChange = True
+                if (j in safeOnes):
+                    tempSpots = knowledgeBase[i].get("spots").remove(j)
+                    knowledgeBase[i].update({"spots" : tempSpots})
+                    clueChange = True
+        
+        #check for new known values
+        for i in knowledgeBase:
+            if (knowledgeBase[i].get("value") == 0):
+                safeOnes.append(knowledgeBase[i].get("spots"))
+                clueChange = True
+            elif (knowledgeBase[i].get("value") == len(knowledgeBase[i].get("spots"))):
+                mineOnes.append(knowledgeBase[i].get("spots"))
+                clueChange = True
+    
+    #remove accidental duplicates
+    safeOnes = list(set(safeOnes))
+    mineOnes = list(set(mineOnes))
+
+        
 # makes the gameboard using the DIM, MINES (number of mines)
 def makeGameBoard():
     global DIM
@@ -120,20 +192,7 @@ def makeGameBoard():
     
     neighborUpdate()
 
-#initialize the knowledge base
-def makeKnowledgeBase():
-    global knowledgeBase
-    global SIZE
-    knowledgebase = {}
-    for i in range(SIZE):
-        knowledgebase["spot{}".format((i))] = {
-            "selected" : False,
-            "isMine" : None,
-            "mines" : 0,
-            "logic" : "x",
-        }
-
-#get the valid neighbors to a spot
+#get the mine count for each spot
 def neighborUpdate():
     global gameBoard
     global DIM
@@ -166,6 +225,7 @@ def neighborUpdate():
         
         gameBoard["spot{}".format(i)].update({"mines" : counter})
 
+#get the valid neighbors to a spot
 def getNeighbors(current):
     global SIZE
     global DIM
