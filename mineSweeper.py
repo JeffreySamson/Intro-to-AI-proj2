@@ -36,7 +36,7 @@ def main():
 
     makeGameBoard()
     neighborUpdate()
-    print("GAME BOARD")
+    print("BOARD KEY")
     print("* = mine, 1-8 = clue")
     printBoardNew()
     if(moveType == 1):
